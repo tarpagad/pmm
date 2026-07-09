@@ -1,7 +1,7 @@
 {
   "name": "package-cache-cleaner",
   "version": "1.0.0",
-  "description": "CLI tool to clean up npm, pnpm, bun, yarn, and nub package caches",
+  "description": "Interactive CLI to manage and clean caches for npm, pnpm, bun, yarn, and nub. Shows installed versions and cache sizes, cleans all or one at a time, and installs/uninstalls package managers.",
   "type": "module",
   "bin": {
     "pmm": "./index.js"
@@ -9,7 +9,26 @@
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": ["cache", "clean", "npm", "pnpm", "bun", "yarn", "nub", "cli"],
-  "author": "Your Name",
+  "keywords": [
+    "cli",
+    "nodejs",
+    "package-manager",
+    "cache",
+    "cache-cleaner",
+    "npm",
+    "pnpm",
+    "bun",
+    "yarn",
+    "nub"
+  ],
+  "homepage": "https://github.com/tarpagad/pmm#readme",
+  "bugs": {
+    "url": "https://github.com/tarpagad/pmm/issues"
+  },
+  "author": {
+    "name": "Jean Didier",
+    "email": "mail2jndd@gmail.com",
+    "url": "https://github.com/tarpagad"
+  },
   "license": "MIT"
 }
