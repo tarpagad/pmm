@@ -1,0 +1,15 @@
+{
+  "name": "package-cache-cleaner",
+  "version": "1.0.0",
+  "description": "CLI tool to clean up npm, pnpm, bun, yarn, and nub package caches",
+  "type": "module",
+  "bin": {
+    "pmm": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["cache", "clean", "npm", "pnpm", "bun", "yarn", "nub", "cli"],
+  "author": "Your Name",
+  "license": "MIT"
+}
