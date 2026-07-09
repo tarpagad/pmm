@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Coverage / test artifacts
+coverage/
+.nyc_output/
+*.lcov
+
+# Cache directories created by tooling
+.eslintcache
+.cache/
+.parcel-cache/
+.turbo/
+
+# pmm-specific: nothing yet, but keep a section for future runtime state
+.pmm/

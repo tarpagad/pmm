@@ -1,5 +1,5 @@
 {
-  "name": "package-cache-cleaner",
+  "name": "package-managers-manager",
   "version": "1.0.0",
   "description": "Interactive CLI to manage and clean caches for npm, pnpm, bun, yarn, and nub. Shows installed versions and cache sizes, cleans all or one at a time, and installs/uninstalls package managers.",
   "type": "module",

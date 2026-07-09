@@ -1,4 +1,4 @@
-# pmm — Package Manager Manager
+# pmm — Package managers Manager
 
 An interactive CLI to manage, inspect, and clean caches for **npm**, **pnpm**, **bun**, **yarn**, and **nub**.
 
