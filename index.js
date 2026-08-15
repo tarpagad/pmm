@@ -639,6 +639,18 @@ const packageManagers = {
         { label: 'bun pm cache (clear alias)', cmd: 'bun pm cache clear', needsShell: true },
       ];
     },
+    cleanModules: function () {
+      const bunHome = process.env.BUN_HOME || path.join(HOMEDIR, '.bun');
+      const g = path.join(bunHome, 'install', 'global', 'node_modules');
+      const gl = path.join(bunHome, 'install', 'global');
+      return [
+        {
+          label: 'direct removal',
+          cmd: `rm -rf ${shellQuote(safeShellPath(g, g))} ${shellQuote(safeShellPath(gl, gl))}`,
+          needsShell: true,
+        },
+      ];
+    },
     install: {
       mac: 'brew install bun',
       linux: 'curl -fsSL https://bun.sh/install | bash',
@@ -1164,7 +1176,7 @@ function getPathInfo(pm) {
       errors: result.errors,
     });
     if (result.bytes > 0n) {
-      if (p.type === 'cache' || p.primary) cacheBytes += result.bytes;
+      if (p.type === 'cache') cacheBytes += result.bytes;
       else if (p.type === 'modules') modulesBytes += result.bytes;
     }
     if (exists) existing++;
@@ -1181,6 +1193,7 @@ function getPathInfo(pm) {
     modulesBytes,
     totalBytes: cacheBytes,
     totalSize: humanSize(cacheBytes),
+    allBytes: cacheBytes + modulesBytes,
     existing,
   };
 }
@@ -1293,10 +1306,17 @@ function renderMenu(infoMap) {
   for (const info of Object.values(infoMap)) {
     const statusIcon = info.installed ? '✅' : '❌';
     const versionStr = info.installed ? `v${info.version}` : 'not installed';
-    const totalStr = info.installed ? `cache: ${info.totalSize}` : '';
+    const parts = [];
+    if (info.installed) {
+      parts.push(`cache: ${info.totalSize}`);
+      if (info.modulesBytes > 0n)
+        parts.push(`${C.dim}modules: ${humanSize(info.modulesBytes)}${C.reset}`);
+      if (info.totalBytes > 0n && info.allBytes > info.totalBytes)
+        parts.push(`all: ${humanSize(info.allBytes)}`);
+    }
     lines.push(
       `  ${info.emoji} ${info.color}${pad(info.name, 9)}${C.reset}: ` +
-        `${statusIcon} ${pad(versionStr, 15)} ${totalStr}` +
+        `${statusIcon} ${pad(versionStr, 15)} ${parts.join(' ')}` +
         (info.installed && info.existing > 1
           ? ` ${C.dim}(${info.existing} locations)${C.reset}`
           : ''),
@@ -1353,10 +1373,23 @@ async function showMenu(infoMap) {
 
   for (const info of Object.values(infoMap)) {
     if (info.installed && info.totalBytes > 0n) {
-      const label = `Clean ${info.emoji} ${info.name} (${info.totalSize})`;
+      const label = `Clean ${info.emoji} ${info.name} cache (${info.totalSize})`;
       const a = { key: actions.length + 1, label, run: () => cleanOne(info) };
       actions.push(a);
       console.log(`  ${C.green}${a.key}${C.reset}. ${label}`);
+    }
+  }
+
+  for (const info of Object.values(infoMap)) {
+    if (info.installed && info.modulesBytes > 0n && info.name === 'bun') {
+      const label = `Clean ${info.emoji} ${info.name} global modules (${humanSize(info.modulesBytes)})`;
+      const a = {
+        key: actions.length + 1,
+        label,
+        run: () => cleanModules(info),
+      };
+      actions.push(a);
+      console.log(`  ${C.yellow}${a.key}${C.reset}. ${label}`);
     }
   }
 
@@ -1386,6 +1419,12 @@ async function cleanAll(infoMap) {
   console.log(`\n${C.green}✅ Cleaned ${ok}/${installed.length} caches.${C.reset}`);
 }
 
+async function confirmDestructive(prompt) {
+  if (ASSUME_YES) return true;
+  const answer = await question(prompt);
+  return /^y(es)?$/i.test(answer.trim());
+}
+
 async function cleanOne(info) {
   console.log(`\n${C.yellow}🧹 Cleaning ${info.emoji} ${info.name} (${info.totalSize})...${C.reset}`);
   if (!ASSUME_YES) {
@@ -1407,6 +1446,61 @@ async function cleanOne(info) {
   } else {
     console.log(
       `${C.red}❌ ${info.name} clean failed${r.error ? `: ${r.error}` : ''}.${C.reset}`,
+    );
+  }
+}
+
+async function cleanModules(info) {
+  console.log(
+    `\n${C.yellow}🧹 Cleaning ${info.emoji} ${info.name} global modules (${humanSize(info.modulesBytes)})...${C.reset}`,
+  );
+  const warned = await confirmDestructive(
+    `This will remove the globally installed packages for ${info.emoji} ${info.name} (e.g. ${C.bright}bun install -g${C.reset} packages) from ${C.bright}${packageManagers[info.name]?.dataPaths?.().find((p) => p.label.startsWith('global ('))?.path ?? ''}${C.reset}.\nAre you sure? (y/N): `,
+  );
+  if (!warned) {
+    console.log(`${C.blue}ℹ️  Cancelled.${C.reset}`);
+    return;
+  }
+
+  const pm = packageManagers[info.name];
+  const modulesPaths = info.paths.filter((p) => p.type === 'modules' && p.exists);
+  const before = modulesPaths.reduce((acc, p) => acc + p.bytes, 0n);
+
+  let method = 'direct removal';
+  if (info.installed && pm && pm.cleanModules) {
+    const cmds = pm.cleanModules();
+    for (const c of cmds) {
+      if (!c.cmd) continue;
+      const res = await runShell(c.cmd);
+      if (res.code === 0) {
+        method = c.label;
+        break;
+      }
+    }
+  }
+
+  let removed = 0;
+  for (const p of modulesPaths) {
+    if (!isRealDir(p.path) && !pathInfo(p.path)?.isFile?.()) continue;
+    if (removeDir(p.path)) removed++;
+  }
+
+  const after = modulesPaths.reduce((acc, p) => {
+    if (isRealDir(p.path) || pathInfo(p.path)?.isFile?.()) {
+      return acc + dirSize(p.path).bytes;
+    }
+    return acc;
+  }, 0n);
+
+  if (removed > 0) {
+    console.log(
+      `${C.green}✅ ${info.emoji} ${info.name} global modules removed via ${method}. ` +
+        `Before ${humanSize(before)} → after ${humanSize(after)} ` +
+        `(freed ${humanSize(before - after)}).${C.reset}`,
+    );
+  } else {
+    console.log(
+      `${C.yellow}⚠️ No global modules were removed${after > 0n ? ' (still present after cleanup)' : ''}.${C.reset}`,
     );
   }
 }

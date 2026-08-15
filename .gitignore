@@ -44,3 +44,6 @@ coverage/
 
 # pmm-specific: nothing yet, but keep a section for future runtime state
 .pmm/
+
+# Local agent tooling state
+.commandcode/

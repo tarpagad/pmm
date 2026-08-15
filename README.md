@@ -33,6 +33,7 @@ The interactive menu shows the status of each package manager and lets you:
 
 - **Clean all caches** with a single action
 - **Clean a specific cache** (size is shown before and after)
+- **Clean bun global modules** — removes globally installed `bun install -g` packages (often multiple GB) with a confirmation prompt, separate from the download cache
 - **Install** a package manager that's not detected
 - **Uninstall** a package manager (with a confirmation prompt, since `rm -rf` is permanent)
 
